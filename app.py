@@ -26,18 +26,36 @@ def add():
     app.logger.error("Request body is empty")
     return Response(status=404)
 
+import psutil
+from flask import Flask, render_template, request, Response, jsonify
+
 @app.route("/health")
 def health():
-    health_messages = []
     try:
-        app.logger.info("Application is running")
-        health_messages.append("Application: Healthy")
-    except Exception as e:
-        app.logger.error(f"Application health check failed: {e}")
-        health_messages.append("Application: Not Healthy")
+        
+        app_status = "Healthy"
+        http_status = 200
 
-    combined_health_status = "\\n".join(health_messages)
-    return combined_health_status
+        
+        memory_info = psutil.virtual_memory()
+        memory_usage = memory_info.percent 
+
+        
+        if memory_usage > 80:
+            app_status = "Unhealthy - High Memory Usage"
+            http_status = 503
+
+     
+        health_data = {
+            "application": app_status,
+            "memory_usage_percent": memory_usage,
+        }
+
+        return jsonify(health_data), http_status
+
+    except Exception as e:
+        app.logger.error(f"Health check failed: {e}")
+        return jsonify({"application": "Unhealthy", "error": str(e)}), 503
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)
